@@ -23,7 +23,7 @@ class PhotoEditor:
         except Exception as e:
             return {'success': False, 'error': str(e)}
 
-    def _split_and_encode_image(self, img):
+    def _split_and_encode_image(self, img, for_preview=False):
         """Split image and convert both halves to data URLs."""
         width, height = img.size
         mid_x = width // 2
@@ -32,10 +32,22 @@ class PhotoEditor:
         left_half = img.crop((0, 0, mid_x, height))
         right_half = img.crop((mid_x, 0, width, height))
 
+        # For preview, we'll maintain a higher resolution but still resize very large images
+        if for_preview:
+            def resize_if_needed(image):
+                w, h = image.size
+                max_size = (2048, 2048)  # Much larger max size for preview
+                if w > max_size[0] or h > max_size[1]:
+                    image.thumbnail(max_size, Image.Resampling.LANCZOS)
+                return image
+
+            left_half = resize_if_needed(left_half)
+            right_half = resize_if_needed(right_half)
+
         # Convert both halves to data URLs
         def to_data_url(image):
             buffer = BytesIO()
-            image.save(buffer, format='JPEG', quality=85)
+            image.save(buffer, format='JPEG', quality=95)  # Increased quality
             img_str = base64.b64encode(buffer.getvalue()).decode()
             return f'data:image/jpeg;base64,{img_str}'
 
@@ -73,12 +85,9 @@ class PhotoEditor:
                         # Convert to RGB if necessary
                         if img.mode in ('RGBA', 'P'):
                             img = img.convert('RGB')
-                        # Resize for preview
-                        max_size = (800, 800)
-                        img.thumbnail(max_size, Image.Resampling.LANCZOS)
                         
                         # Split and get data URLs for both halves
-                        left_url, right_url = self._split_and_encode_image(img)
+                        left_url, right_url = self._split_and_encode_image(img, for_preview=True)
                         
                         files_with_data.append({
                             'path': file_path,
@@ -131,9 +140,9 @@ class PhotoEditor:
                 left_path = os.path.join(self.output_directory, left_filename)
                 right_path = os.path.join(self.output_directory, right_filename)
                 
-                # Save both halves
-                left_half.save(left_path)
-                right_half.save(right_path)
+                # Save both halves at full quality
+                left_half.save(left_path, quality=100)
+                right_half.save(right_path, quality=100)
 
                 return {
                     'success': True,
@@ -142,3 +151,42 @@ class PhotoEditor:
                 }
         except Exception as e:
             return {'success': False, 'error': str(e)}
+
+    def process_all_images(self, file_paths):
+        """Process multiple images at once."""
+        if not self.output_directory:
+            return {'success': False, 'error': 'Output directory not set'}
+
+        results = []
+        for file_path in file_paths:
+            try:
+                result = self.process_image(file_path, {})
+                if result['success']:
+                    results.append({
+                        'path': file_path,
+                        'success': True,
+                        'output_paths': result['output_paths']
+                    })
+                else:
+                    results.append({
+                        'path': file_path,
+                        'success': False,
+                        'error': result['error']
+                    })
+            except Exception as e:
+                results.append({
+                    'path': file_path,
+                    'success': False,
+                    'error': str(e)
+                })
+
+        # Count successes and failures
+        successes = sum(1 for r in results if r['success'])
+        failures = len(results) - successes
+
+        return {
+            'success': True,
+            'results': results,
+            'summary': f"Processed {successes} images successfully" + 
+                      (f", {failures} failed" if failures > 0 else "")
+        }

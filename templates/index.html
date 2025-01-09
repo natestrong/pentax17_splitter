@@ -155,13 +155,7 @@
         .modal-close:hover {
             color: #000;
         }
-        .modal-images {
-            display: flex;
-            gap: 20px;
-            justify-content: center;
-        }
         .modal-image-container {
-            flex: 1;
             text-align: center;
         }
         .modal-image-container img {
@@ -183,6 +177,7 @@
             <button onclick="selectOutputDir()">Select Output Directory</button>
             <div id="output-dir" class="output-path"></div>
         </div>
+        <button onclick="exportAll()" id="export-button" disabled>Export All</button>
         <div class="error-message" id="error-message"></div>
     </div>
     
@@ -192,15 +187,9 @@
     <div id="imageModal" class="modal">
         <div class="modal-content">
             <button class="modal-close" onclick="closeModal()">×</button>
-            <div class="modal-images">
-                <div class="modal-image-container">
-                    <img id="modalLeftImage">
-                    <div class="side-label">Left Half</div>
-                </div>
-                <div class="modal-image-container">
-                    <img id="modalRightImage">
-                    <div class="side-label">Right Half</div>
-                </div>
+            <div class="modal-image-container">
+                <img id="modalImage">
+                <div id="modalLabel" class="side-label"></div>
             </div>
         </div>
     </div>
@@ -209,6 +198,7 @@
         let selectedFiles = [];
         let outputDir = null;
         let lastPhotoDir = localStorage.getItem('lastPhotoDir') || '~';
+        let currentModalImage = null;  // Track current image in modal
 
         function showError(message) {
             const errorElement = document.getElementById('error-message');
@@ -219,20 +209,84 @@
             }, 5000);
         }
 
-        function updateEditButtons() {
-            const editButtons = document.querySelectorAll('.edit-button');
-            editButtons.forEach(button => {
-                button.disabled = !outputDir;
-            });
+        function updateButtons() {
+            const exportButton = document.getElementById('export-button');
+            exportButton.disabled = !outputDir || selectedFiles.length === 0;
         }
 
-        function showModal(leftUrl, rightUrl) {
-            const modal = document.getElementById('imageModal');
-            const leftImg = document.getElementById('modalLeftImage');
-            const rightImg = document.getElementById('modalRightImage');
+        function findImagePosition(targetPath, targetSide) {
+            // Convert the grid of images into a linear sequence of halves
+            let position = 0;
+            for (const file of selectedFiles) {
+                if (file.path === targetPath) {
+                    return {
+                        position: position + (targetSide === 'right' ? 1 : 0),
+                        totalPositions: selectedFiles.length * 2
+                    };
+                }
+                position += 2;  // Each file has 2 positions (left and right)
+            }
+            return null;
+        }
+
+        function getAdjacentImage(currentPath, currentSide, direction) {
+            const pos = findImagePosition(currentPath, currentSide);
+            if (!pos) return null;
+
+            let newPosition = pos.position;
             
-            leftImg.src = leftUrl;
-            rightImg.src = rightUrl;
+            switch (direction) {
+                case 'left':
+                    newPosition--;
+                    break;
+                case 'right':
+                    newPosition++;
+                    break;
+                case 'up':
+                    newPosition -= 4;  // Move up two full images (4 halves)
+                    break;
+                case 'down':
+                    newPosition += 4;  // Move down two full images (4 halves)
+                    break;
+            }
+
+            // Handle wrapping
+            if (newPosition < 0) {
+                if (direction === 'left') {
+                    newPosition = pos.totalPositions - 1;  // Wrap to end
+                } else {
+                    return null;  // Don't wrap vertically
+                }
+            } else if (newPosition >= pos.totalPositions) {
+                if (direction === 'right') {
+                    newPosition = 0;  // Wrap to start
+                } else {
+                    return null;  // Don't wrap vertically
+                }
+            }
+
+            // Convert position back to file and side
+            const fileIndex = Math.floor(newPosition / 2);
+            const side = newPosition % 2 === 0 ? 'left' : 'right';
+            
+            if (fileIndex >= 0 && fileIndex < selectedFiles.length) {
+                return {
+                    file: selectedFiles[fileIndex],
+                    side: side
+                };
+            }
+            return null;
+        }
+
+        function showModal(imageUrl, side, filePath) {
+            const modal = document.getElementById('imageModal');
+            const img = document.getElementById('modalImage');
+            const label = document.getElementById('modalLabel');
+            
+            currentModalImage = { url: imageUrl, side, path: filePath };
+            
+            img.src = imageUrl;
+            label.textContent = side === 'left' ? 'Left Half' : 'Right Half';
             modal.classList.add('active');
             
             // Close modal when clicking outside content
@@ -242,19 +296,46 @@
                 }
             };
             
-            // Add escape key listener
-            document.addEventListener('keydown', handleEscKey);
+            // Add key listeners
+            document.addEventListener('keydown', handleKeyPress);
         }
         
         function closeModal() {
             const modal = document.getElementById('imageModal');
             modal.classList.remove('active');
-            document.removeEventListener('keydown', handleEscKey);
+            document.removeEventListener('keydown', handleKeyPress);
+            currentModalImage = null;
         }
         
-        function handleEscKey(e) {
-            if (e.key === 'Escape') {
-                closeModal();
+        function handleKeyPress(e) {
+            if (!currentModalImage) return;
+
+            let direction = null;
+            switch (e.key) {
+                case 'Escape':
+                    closeModal();
+                    return;
+                case 'ArrowLeft':
+                    direction = 'left';
+                    break;
+                case 'ArrowRight':
+                    direction = 'right';
+                    break;
+                case 'ArrowUp':
+                    direction = 'up';
+                    break;
+                case 'ArrowDown':
+                    direction = 'down';
+                    break;
+                default:
+                    return;
+            }
+
+            const nextImage = getAdjacentImage(currentModalImage.path, currentModalImage.side, direction);
+            if (nextImage) {
+                const nextUrl = nextImage.side === 'left' ? nextImage.file.left_data_url : nextImage.file.right_data_url;
+                showModal(nextUrl, nextImage.side, nextImage.file.path);
+                e.preventDefault();  // Prevent page scrolling
             }
         }
 
@@ -265,9 +346,28 @@
                 const outputDirElement = document.getElementById('output-dir');
                 outputDirElement.textContent = result.path;
                 outputDirElement.style.display = 'block';
-                updateEditButtons();
+                updateButtons();
             } else if (result.error) {
                 showError(result.error);
+            }
+        }
+
+        async function exportAll() {
+            if (!outputDir) {
+                showError('Please select an output directory first');
+                return;
+            }
+            
+            try {
+                const paths = selectedFiles.map(f => f.path);
+                const result = await pywebview.api.process_all_images(paths);
+                if (result.success) {
+                    showError(result.summary);
+                } else if (result.error) {
+                    showError(result.error);
+                }
+            } catch (error) {
+                showError('Failed to process images');
             }
         }
 
@@ -288,6 +388,7 @@
                     document.getElementById('file-count').textContent = 
                         `${selectedFiles.length} file(s) selected`;
                     displayImages(selectedFiles);
+                    updateButtons();
                 } else if (result.error) {
                     showError(result.error);
                 }
@@ -317,7 +418,7 @@
                 const leftDiv = document.createElement('div');
                 const leftImg = document.createElement('img');
                 leftImg.src = file.left_data_url;
-                leftImg.onclick = () => showModal(file.left_data_url, file.right_data_url);
+                leftImg.onclick = () => showModal(file.left_data_url, 'left', file.path);
                 leftDiv.appendChild(leftImg);
                 const leftLabel = document.createElement('div');
                 leftLabel.className = 'side-label';
@@ -329,7 +430,7 @@
                 const rightDiv = document.createElement('div');
                 const rightImg = document.createElement('img');
                 rightImg.src = file.right_data_url;
-                rightImg.onclick = () => showModal(file.left_data_url, file.right_data_url);
+                rightImg.onclick = () => showModal(file.right_data_url, 'right', file.path);
                 rightDiv.appendChild(rightImg);
                 const rightLabel = document.createElement('div');
                 rightLabel.className = 'side-label';
@@ -338,29 +439,8 @@
                 splitPreview.appendChild(rightDiv);
                 
                 card.appendChild(splitPreview);
-                
-                const processButton = document.createElement('button');
-                processButton.textContent = 'Save Both Halves';
-                processButton.className = 'edit-button';
-                processButton.disabled = !outputDir;
-                processButton.onclick = () => processImage(file.path);
-                card.appendChild(processButton);
-                
                 container.appendChild(card);
             });
-        }
-
-        async function processImage(filepath) {
-            try {
-                const result = await pywebview.api.process_image(filepath, {});
-                if (result.success) {
-                    showError(`Split into:\n${result.output_paths.join('\n')}`);
-                } else if (result.error) {
-                    showError(result.error);
-                }
-            } catch (error) {
-                showError('Failed to process image');
-            }
         }
     </script>
 </body>
