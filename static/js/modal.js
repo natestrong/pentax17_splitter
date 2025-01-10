@@ -17,8 +17,6 @@ export class Modal {
     
     setupEventListeners() {
         document.addEventListener('keydown', this.handleKeyPress.bind(this));
-        
-        // Close modal when clicking outside content
         this.modal.onclick = (e) => {
             if (e.target === this.modal) {
                 this.close();
@@ -40,21 +38,11 @@ export class Modal {
             this.modalImg.classList.add(`rotate-${rotation}`);
         }
         
-        // Update filename
-        this.filename.textContent = `${path} (${side})`;
-        
-        // Find current index
-        const allHalves = this.files.flatMap(file => [
-            { url: file.left_data_url, side: 'left', path: file.path },
-            { url: file.right_data_url, side: 'right', path: file.path }
-        ]);
-        
-        this.currentIndex = allHalves.findIndex(half => 
-            half.url === imageUrl && half.side === side && half.path === path
-        );
+        // Update filename and label
+        this.filename.textContent = path;
+        this.label.textContent = side === 'left' ? 'Left Half' : 'Right Half';
         
         this.currentImage = { url: imageUrl, side, path, rotation };
-        
         this.updateNavigationButtons();
     }
     
@@ -62,8 +50,27 @@ export class Modal {
         this.modal.classList.remove('active');
         this.currentImage = null;
     }
-
-    findImagePosition(targetPath, targetSide) {
+    
+    navigate(direction) {
+        if (!this.currentImage) return;
+        
+        const { position, totalPositions } = this.getPosition(
+            this.currentImage.path,
+            this.currentImage.side
+        );
+        
+        let newPosition = position + (direction === 'right' ? 1 : -1);
+        if (newPosition < 0) newPosition = totalPositions - 1;
+        if (newPosition >= totalPositions) newPosition = 0;
+        
+        const nextImage = this.getImageAtPosition(newPosition);
+        if (nextImage) {
+            const nextUrl = nextImage.side === 'left' ? nextImage.file.left_data_url : nextImage.file.right_data_url;
+            this.show(nextUrl, nextImage.side, nextImage.file.path, this.currentImage.rotation);
+        }
+    }
+    
+    getPosition(targetPath, targetSide) {
         let position = 0;
         for (const file of this.files) {
             if (file.path === targetPath) {
@@ -74,46 +81,12 @@ export class Modal {
             }
             position += 2;
         }
-        return null;
+        return { position: 0, totalPositions: this.files.length * 2 };
     }
-
-    getAdjacentImage(currentPath, currentSide, direction) {
-        const pos = this.findImagePosition(currentPath, currentSide);
-        if (!pos) return null;
-
-        let newPosition = pos.position;
-        
-        switch (direction) {
-            case 'left':
-                newPosition--;
-                break;
-            case 'right':
-                newPosition++;
-                break;
-            case 'up':
-                newPosition -= 4;
-                break;
-            case 'down':
-                newPosition += 4;
-                break;
-        }
-
-        if (newPosition < 0) {
-            if (direction === 'left') {
-                newPosition = pos.totalPositions - 1;
-            } else {
-                return null;
-            }
-        } else if (newPosition >= pos.totalPositions) {
-            if (direction === 'right') {
-                newPosition = 0;
-            } else {
-                return null;
-            }
-        }
-
-        const fileIndex = Math.floor(newPosition / 2);
-        const side = newPosition % 2 === 0 ? 'left' : 'right';
+    
+    getImageAtPosition(position) {
+        const fileIndex = Math.floor(position / 2);
+        const side = position % 2 === 0 ? 'left' : 'right';
         
         if (fileIndex >= 0 && fileIndex < this.files.length) {
             return {
@@ -123,47 +96,18 @@ export class Modal {
         }
         return null;
     }
-
-    getFilename(path) {
-        return path.split('/').pop();
-    }
-
-    navigate(direction) {
-        if (!this.currentImage) return;
-        
-        const nextImage = this.getAdjacentImage(this.currentImage.path, this.currentImage.side, direction);
-        if (nextImage) {
-            const nextUrl = nextImage.side === 'left' ? nextImage.file.left_data_url : nextImage.file.right_data_url;
-            this.show(nextUrl, nextImage.side, nextImage.file.path, this.currentImage.rotation);
-        }
-    }
-
+    
     handleKeyPress(e) {
         if (!this.currentImage) return;
-
-        let direction = null;
-        switch (e.key) {
-            case 'Escape':
-                this.close();
-                return;
-            case 'ArrowLeft':
-                direction = 'left';
-                break;
-            case 'ArrowRight':
-                direction = 'right';
-                break;
-            case 'ArrowUp':
-                direction = 'up';
-                break;
-            case 'ArrowDown':
-                direction = 'down';
-                break;
-            default:
-                return;
-        }
-
-        if (direction) {
-            this.navigate(direction);
+        
+        if (e.key === 'ArrowLeft') {
+            this.navigate('left');
+            e.preventDefault();
+        } else if (e.key === 'ArrowRight') {
+            this.navigate('right');
+            e.preventDefault();
+        } else if (e.key === 'Escape') {
+            this.close();
             e.preventDefault();
         }
     }

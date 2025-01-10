@@ -5,6 +5,8 @@ export class ImageGrid {
         this.deletedHalves = new Set(); // Track deleted image halves
         this.rotations = new Map(); // Track rotation degrees for each half
         this.imageAspectRatios = new Map();
+        this.removeBorders = new Map(); // Track border removal state for each half
+        this.imageData = new Map(); // Store both original and cropped versions
     }
 
     display(files) {
@@ -13,6 +15,8 @@ export class ImageGrid {
         this.deletedHalves.clear();
         this.rotations.clear();
         this.imageAspectRatios.clear();
+        this.removeBorders.clear();
+        this.imageData.clear();
         
         files.forEach((file, index) => {
             const card = document.createElement('div');
@@ -21,115 +25,154 @@ export class ImageGrid {
             
             const filename = document.createElement('div');
             filename.className = 'filename';
-            filename.textContent = file.path;
+            filename.textContent = file.path.split('/').pop();
             card.appendChild(filename);
             
             const splitPreview = document.createElement('div');
             splitPreview.className = 'split-preview';
             
-            // Left half
-            const leftContainer = document.createElement('div');
-            leftContainer.className = 'preview-container';
-            leftContainer.dataset.side = 'left';
-            leftContainer.dataset.path = file.path;
+            // Store image data
+            this.imageData.set(`${index}-left`, {
+                original: file.left_data_url,
+                cropped: file.left_cropped_url,
+                cropCoords: file.left_crop_coords
+            });
+            this.imageData.set(`${index}-right`, {
+                original: file.right_data_url,
+                cropped: file.right_cropped_url,
+                cropCoords: file.right_crop_coords
+            });
             
-            const leftWrapper = document.createElement('div');
-            leftWrapper.className = 'image-wrapper';
-            
-            const leftImg = document.createElement('img');
-            leftImg.src = file.left_data_url;
-            leftImg.onload = () => {
-                const aspectRatio = leftImg.naturalWidth / leftImg.naturalHeight;
-                this.imageAspectRatios.set(`${file.path}-left`, aspectRatio);
-                this.updateImageWrapperSize(leftWrapper, aspectRatio, 0);
-            };
-            leftImg.onclick = () => {
-                const rotation = this.rotations.get(`${file.path}-left`) || 0;
-                this.modal.show(file.left_data_url, 'left', file.path, rotation);
-            };
-            
-            leftWrapper.appendChild(leftImg);
-            
-            leftContainer.appendChild(leftWrapper);
-            
-            const leftButtons = document.createElement('div');
-            leftButtons.className = 'preview-buttons';
-            
-            const deleteLeftBtn = document.createElement('button');
-            deleteLeftBtn.className = 'preview-button delete';
-            deleteLeftBtn.innerHTML = '<i class="fas fa-trash"></i>';
-            deleteLeftBtn.onclick = (e) => {
-                e.stopPropagation();
-                this.deleteHalf(file.path, 'left');
-            };
-            
-            const rotateLeftBtn = document.createElement('button');
-            rotateLeftBtn.className = 'preview-button rotate';
-            rotateLeftBtn.innerHTML = '<i class="fas fa-rotate"></i>';
-            rotateLeftBtn.onclick = (e) => {
-                e.stopPropagation();
-                this.rotateHalf(file.path, 'left');
-            };
-            
-            leftButtons.appendChild(deleteLeftBtn);
-            leftButtons.appendChild(rotateLeftBtn);
-            leftContainer.appendChild(leftButtons);
-            
-            splitPreview.appendChild(leftContainer);
-            
-            // Right half
-            const rightContainer = document.createElement('div');
-            rightContainer.className = 'preview-container';
-            rightContainer.dataset.side = 'right';
-            rightContainer.dataset.path = file.path;
-            
-            const rightWrapper = document.createElement('div');
-            rightWrapper.className = 'image-wrapper';
-            
-            const rightImg = document.createElement('img');
-            rightImg.src = file.right_data_url;
-            rightImg.onload = () => {
-                const aspectRatio = rightImg.naturalWidth / rightImg.naturalHeight;
-                this.imageAspectRatios.set(`${file.path}-right`, aspectRatio);
-                this.updateImageWrapperSize(rightWrapper, aspectRatio, 0);
-            };
-            rightImg.onclick = () => {
-                const rotation = this.rotations.get(`${file.path}-right`) || 0;
-                this.modal.show(file.right_data_url, 'right', file.path, rotation);
-            };
-            
-            rightWrapper.appendChild(rightImg);
-            
-            rightContainer.appendChild(rightWrapper);
-            
-            const rightButtons = document.createElement('div');
-            rightButtons.className = 'preview-buttons';
-            
-            const deleteRightBtn = document.createElement('button');
-            deleteRightBtn.className = 'preview-button delete';
-            deleteRightBtn.innerHTML = '<i class="fas fa-trash"></i>';
-            deleteRightBtn.onclick = (e) => {
-                e.stopPropagation();
-                this.deleteHalf(file.path, 'right');
-            };
-            
-            const rotateRightBtn = document.createElement('button');
-            rotateRightBtn.className = 'preview-button rotate';
-            rotateRightBtn.innerHTML = '<i class="fas fa-rotate"></i>';
-            rotateRightBtn.onclick = (e) => {
-                e.stopPropagation();
-                this.rotateHalf(file.path, 'right');
-            };
-            
-            rightButtons.appendChild(deleteRightBtn);
-            rightButtons.appendChild(rotateRightBtn);
-            rightContainer.appendChild(rightButtons);
-            
-            splitPreview.appendChild(rightContainer);
+            // Create preview containers
+            splitPreview.appendChild(this.createPreviewContainer(file, 'left', index));
+            splitPreview.appendChild(this.createPreviewContainer(file, 'right', index));
             
             card.appendChild(splitPreview);
             this.container.appendChild(card);
         });
+    }
+
+    createPreviewContainer(file, side, index) {
+        const container = document.createElement('div');
+        container.className = 'preview-container';
+        const key = `${index}-${side}`;
+        container.dataset.key = key;
+        
+        const wrapper = document.createElement('div');
+        wrapper.className = 'image-wrapper';
+        
+        const img = document.createElement('img');
+        img.className = 'preview-image';
+        const imageData = this.imageData.get(key);
+        img.src = imageData.original;
+        img.onclick = () => {
+            const rotation = this.rotations.get(key) || 0;
+            this.modal.show(img.src, side, file.path, rotation);
+        };
+        
+        // Set initial aspect ratio
+        const tempImg = new Image();
+        tempImg.onload = () => {
+            this.imageAspectRatios.set(key, tempImg.width / tempImg.height);
+            this.updateImageWrapperSize(wrapper, this.imageAspectRatios.get(key), 0);
+        };
+        tempImg.src = imageData.original;
+        
+        wrapper.appendChild(img);
+        container.appendChild(wrapper);
+        
+        // Add toolbar
+        const tools = document.createElement('div');
+        tools.className = 'preview-tools';
+        
+        // Delete button
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'delete-btn';
+        deleteBtn.innerHTML = '<i class="fas fa-trash"></i>';
+        deleteBtn.onclick = (e) => {
+            e.stopPropagation();
+            this.toggleDelete(key, index, deleteBtn);
+        };
+        
+        // Rotation button
+        const rotateBtn = document.createElement('button');
+        rotateBtn.innerHTML = '<i class="fas fa-redo"></i>';
+        rotateBtn.onclick = (e) => {
+            e.stopPropagation();
+            this.rotateImage(key);
+        };
+        
+        // Border removal checkbox
+        const borderLabel = document.createElement('label');
+        borderLabel.className = 'border-remove-label';
+        borderLabel.innerHTML = '<i class="fas fa-crop"></i>';
+        borderLabel.title = 'Remove black borders';
+        
+        const borderCheck = document.createElement('input');
+        borderCheck.type = 'checkbox';
+        borderCheck.checked = true; // Default to checked
+        borderCheck.style.display = 'none';
+        
+        borderCheck.onchange = () => {
+            this.removeBorders.set(key, borderCheck.checked);
+            const imageData = this.imageData.get(key);
+            img.src = borderCheck.checked && imageData.cropped ? 
+                     imageData.cropped : imageData.original;
+        };
+        
+        borderLabel.appendChild(borderCheck);
+        
+        tools.appendChild(deleteBtn);
+        tools.appendChild(rotateBtn);
+        tools.appendChild(borderLabel);
+        container.appendChild(tools);
+        
+        // Set initial state
+        this.removeBorders.set(key, true);
+        if (imageData.cropped) {
+            img.src = imageData.cropped;
+        }
+        
+        return container;
+    }
+
+    toggleDelete(key, index, deleteBtn) {
+        const container = this.container.querySelector(
+            `.preview-container[data-key="${key}"]`
+        );
+        
+        if (this.deletedHalves.has(key)) {
+            // Undelete
+            this.deletedHalves.delete(key);
+            container.classList.remove('deleted');
+            deleteBtn.classList.remove('active');
+        } else {
+            // Delete
+            this.deletedHalves.add(key);
+            container.classList.add('deleted');
+            deleteBtn.classList.add('active');
+        }
+        
+        // Check if both halves are deleted
+        const side = key.split('-')[1];
+        const otherSide = side === 'left' ? 'right' : 'left';
+        const otherKey = `${index}-${otherSide}`;
+        
+        const card = this.container.querySelector(
+            `.image-card[data-index="${index}"]`
+        );
+        
+        if (this.deletedHalves.has(otherKey) && this.deletedHalves.has(key)) {
+            // Both halves are deleted
+            if (card) {
+                card.classList.add('fully-deleted');
+            }
+        } else {
+            // At least one half is not deleted
+            if (card) {
+                card.classList.remove('fully-deleted');
+            }
+        }
     }
 
     updateImageWrapperSize(wrapper, aspectRatio, rotation) {
@@ -153,79 +196,22 @@ export class ImageGrid {
         }
     }
 
-    deleteHalf(path, side) {
-        const key = `${path}-${side}`;
-        this.deletedHalves.add(key);
-        
-        // Mark the half as deleted in the UI
-        const container = this.container.querySelector(
-            `.preview-container[data-path="${path}"][data-side="${side}"]`
-        );
-        if (container) {
-            container.classList.add('deleted');
-        }
-        
-        // Check if both halves are deleted
-        const otherSide = side === 'left' ? 'right' : 'left';
-        const otherKey = `${path}-${otherSide}`;
-        
-        if (this.deletedHalves.has(otherKey)) {
-            // Both halves are deleted, remove the entire card
-            const card = this.container.querySelector(
-                `.image-card[data-index="${this.getFileIndex(path)}"]`
-            );
-            if (card) {
-                card.style.opacity = '0';
-                setTimeout(() => {
-                    card.remove();
-                    // Update the modal's file list
-                    this.modal.setFiles(
-                        Array.from(this.container.querySelectorAll('.image-card'))
-                            .map(card => this.getFileFromCard(card))
-                    );
-                }, 300);
-            }
-        }
-    }
-
-    rotateHalf(path, side) {
-        const key = `${path}-${side}`;
+    rotateImage(key) {
         const currentRotation = this.rotations.get(key) || 0;
-        const newRotation = (currentRotation + 90) % 360;
+        const newRotation = (currentRotation - 90 + 360) % 360;
         this.rotations.set(key, newRotation);
         
-        const wrapper = this.container.querySelector(
-            `.preview-container[data-path="${path}"][data-side="${side}"] .image-wrapper`
+        const container = this.container.querySelector(
+            `.preview-container[data-key="${key}"]`
         );
-        
-        if (wrapper) {
-            // Remove any existing rotation classes
-            wrapper.classList.remove('rotate-90', 'rotate-180', 'rotate-270');
-            
-            // Add new rotation class if not 0
-            if (newRotation > 0) {
-                wrapper.classList.add(`rotate-${newRotation}`);
-            }
-            
-            // Update size based on rotation
-            const aspectRatio = this.imageAspectRatios.get(key);
-            if (aspectRatio) {
-                this.updateImageWrapperSize(wrapper, aspectRatio, newRotation);
-            }
+        const img = container.querySelector('img');
+        img.classList.remove('rotate-90', 'rotate-180', 'rotate-270');
+        if (newRotation > 0) {
+            img.classList.add(`rotate-${newRotation}`);
         }
-    }
-
-    getFileIndex(path) {
-        const card = this.container.querySelector(
-            `.image-card .preview-container[data-path="${path}"]`
-        )?.closest('.image-card');
-        return card ? card.dataset.index : -1;
-    }
-
-    getFileFromCard(card) {
-        const path = card.querySelector('.preview-container').dataset.path;
-        const leftUrl = card.querySelector('.preview-container[data-side="left"] .image-wrapper img').src;
-        const rightUrl = card.querySelector('.preview-container[data-side="right"] .image-wrapper img').src;
-        return { path, left_data_url: leftUrl, right_data_url: rightUrl };
+        
+        const wrapper = img.closest('.image-wrapper');
+        const aspectRatio = this.imageAspectRatios.get(key);
+        this.updateImageWrapperSize(wrapper, aspectRatio, newRotation);
     }
 }

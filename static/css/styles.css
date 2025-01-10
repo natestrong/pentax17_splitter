@@ -64,7 +64,7 @@ body {
     gap: 8px;
     min-width: 0;
     position: relative;
-    padding-bottom: 40px;
+    height: 100%;
 }
 
 .image-wrapper {
@@ -74,6 +74,8 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
+    flex: 1;
+    margin-bottom: 40px;
 }
 
 .image-wrapper img {
@@ -81,18 +83,17 @@ body {
     max-height: 100%;
     object-fit: contain;
     cursor: pointer;
-    transition: transform 0.3s ease;
 }
 
-.image-wrapper.rotate-90 img {
+.rotate-90 {
     transform: rotate(90deg);
 }
 
-.image-wrapper.rotate-180 img {
+.rotate-180 {
     transform: rotate(180deg);
 }
 
-.image-wrapper.rotate-270 img {
+.rotate-270 {
     transform: rotate(270deg);
 }
 
@@ -120,7 +121,6 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.2s;
 }
 
 .preview-button:hover {
@@ -141,6 +141,22 @@ body {
 .preview-container.deleted .image-wrapper {
     opacity: 0.3;
     pointer-events: none;
+}
+
+.preview-container.deleted .delete-btn {
+    background: rgba(255, 0, 0, 0.4) !important;
+}
+
+.image-card.fully-deleted {
+    opacity: 0.5;
+}
+
+.delete-btn.active {
+    background: rgba(255, 0, 0, 0.4) !important;
+}
+
+.delete-btn:hover {
+    background: rgba(255, 0, 0, 0.6) !important;
 }
 
 .preview-container.deleted .preview-buttons {
@@ -204,24 +220,50 @@ button:disabled {
 
 .modal-content {
     position: relative;
-    background: white;
+    background: #fff;
     padding: 20px;
     border-radius: 8px;
-    max-width: 90%;
+    max-width: 90vw;
     max-height: 90vh;
-    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
 }
 
-.modal-close {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    background: none;
-    border: none;
-    font-size: 24px;
-    cursor: pointer;
-    color: #ff4444;
-    z-index: 2;
+.modal-image-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+
+.modal-image-container {
+    position: relative;
+    display: inline-block;
+}
+
+.modal-image-container img {
+    display: block;
+    max-width: 80vw;
+    max-height: calc(80vh - 100px);
+    object-fit: contain;
+}
+
+.modal-image-info {
+    text-align: center;
+    padding: 10px;
+    background: #f5f5f5;
+    border-radius: 4px;
+    width: 100%;
+}
+
+.modal-filename {
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.side-label {
+    color: #666;
 }
 
 .modal-nav-button {
@@ -250,42 +292,16 @@ button:disabled {
     right: 40px;
 }
 
-.modal-image-container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 10px;
-}
-
-.modal-image-container img {
-    max-width: 80vw;
-    max-height: calc(90vh - 100px);
-    object-fit: contain;
-    transition: transform 0.3s ease;
-}
-
-.modal-image-container img.rotate-90 {
-    transform: rotate(90deg);
-}
-
-.modal-image-container img.rotate-180 {
-    transform: rotate(180deg);
-}
-
-.modal-image-container img.rotate-270 {
-    transform: rotate(270deg);
-}
-
-.modal-image-info {
-    text-align: center;
-    margin-top: 10px;
-}
-
-.modal-filename {
-    font-size: 0.9em;
-    color: #333;
-    margin-bottom: 5px;
-    word-break: break-all;
+.modal-close {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: #ff4444;
+    z-index: 2;
 }
 
 .delete-button {
@@ -314,4 +330,62 @@ button:disabled {
 .delete-button:hover {
     transform: scale(1.1);
     background: white;
+}
+
+.preview-tools {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    gap: 8px;
+    z-index: 10;
+    background: rgba(0, 0, 0, 0.4);
+    padding: 5px;
+    border-radius: 4px;
+    justify-content: center;
+}
+
+.preview-tools button,
+.preview-tools label {
+    background: rgba(0, 0, 0, 0.6);
+    border: none;
+    border-radius: 4px;
+    color: white;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.preview-tools button:hover,
+.preview-tools label:hover {
+    background: rgba(0, 0, 0, 0.8);
+}
+
+.border-remove-label {
+    position: relative;
+}
+
+.border-remove-checkbox {
+    position: absolute;
+    opacity: 0;
+    width: 100%;
+    height: 100%;
+    cursor: pointer;
+    margin: 0;
+    z-index: 1;
+}
+
+.border-remove-label i {
+    color: #fff;
+    opacity: 0.5;
+    transition: opacity 0.2s;
+}
+
+.border-remove-checkbox:checked + i {
+    opacity: 1;
 }

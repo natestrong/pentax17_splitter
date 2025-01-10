@@ -35,11 +35,25 @@
             <button class="modal-nav-button next" onclick="app.modal.navigate('right')">
                 <i class="fas fa-chevron-right"></i>
             </button>
-            <div class="modal-image-container">
-                <img id="modalImage">
+            <div class="modal-image-wrapper">
+                <div class="modal-image-container">
+                    <img id="modalImage">
+                </div>
                 <div class="modal-image-info">
                     <div id="modalFilename" class="modal-filename"></div>
                     <div id="modalLabel" class="side-label"></div>
+                </div>
+                <div class="preview-tools">
+                    <button class="delete-button" title="Delete this half">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                    <button class="rotate-button" title="Rotate this half">
+                        <i class="fas fa-redo"></i>
+                    </button>
+                    <label class="border-remove-label" title="Automatically remove black borders when exporting">
+                        <input type="checkbox" class="border-remove-checkbox" checked>
+                        <i class="fas fa-crop-alt"></i>
+                    </label>
                 </div>
             </div>
         </div>

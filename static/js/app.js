@@ -76,10 +76,15 @@ export class App {
                 // For each file, check which halves should be exported
                 const leftKey = `${f.path}-left`;
                 const rightKey = `${f.path}-right`;
+                
                 return {
                     path: f.path,
                     exportLeft: !this.imageGrid.deletedHalves.has(leftKey),
-                    exportRight: !this.imageGrid.deletedHalves.has(rightKey)
+                    exportRight: !this.imageGrid.deletedHalves.has(rightKey),
+                    leftRotation: this.imageGrid.rotations.get(leftKey) || 0,
+                    rightRotation: this.imageGrid.rotations.get(rightKey) || 0,
+                    removeBorderLeft: this.imageGrid.removeBorders.get(leftKey) || false,
+                    removeBorderRight: this.imageGrid.removeBorders.get(rightKey) || false
                 };
             });
 
