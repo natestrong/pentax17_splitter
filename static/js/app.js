@@ -7,7 +7,7 @@ export class App {
         this.outputDir = null;
         this.lastPhotoDir = localStorage.getItem('lastPhotoDir') || '~';
         this.modal = new Modal();
-        this.imageGrid = new ImageGrid(this.modal);
+        this.imageGrid = new ImageGrid(this.modal, this);
         
         this.setupEventListeners();
         this.updateButtons();
@@ -30,7 +30,8 @@ export class App {
 
     updateButtons() {
         const exportButton = document.getElementById('export-button');
-        exportButton.disabled = !this.outputDir || this.selectedFiles.length === 0;
+        const activeFiles = this.getActiveFiles();
+        exportButton.disabled = !this.outputDir || activeFiles.length === 0;
     }
 
     async selectOutputDir() {
@@ -46,6 +47,16 @@ export class App {
         }
     }
 
+    getActiveFiles() {
+        // Get files that haven't been fully deleted
+        return this.selectedFiles.filter(file => {
+            const leftKey = `${file.path}-left`;
+            const rightKey = `${file.path}-right`;
+            return !this.imageGrid.deletedHalves.has(leftKey) || 
+                   !this.imageGrid.deletedHalves.has(rightKey);
+        });
+    }
+
     async exportAll() {
         if (!this.outputDir) {
             this.showError('Please select an output directory first');
@@ -53,7 +64,25 @@ export class App {
         }
         
         try {
-            const paths = this.selectedFiles.map(f => f.path);
+            // Only export files that haven't been deleted
+            const activeFiles = this.getActiveFiles();
+            
+            if (activeFiles.length === 0) {
+                this.showError('No files to export - all have been deleted');
+                return;
+            }
+
+            const paths = activeFiles.map(f => {
+                // For each file, check which halves should be exported
+                const leftKey = `${f.path}-left`;
+                const rightKey = `${f.path}-right`;
+                return {
+                    path: f.path,
+                    exportLeft: !this.imageGrid.deletedHalves.has(leftKey),
+                    exportRight: !this.imageGrid.deletedHalves.has(rightKey)
+                };
+            });
+
             const result = await pywebview.api.process_all_images(paths);
             if (result.success) {
                 this.showError(result.summary);

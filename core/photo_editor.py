@@ -152,41 +152,51 @@ class PhotoEditor:
         except Exception as e:
             return {'success': False, 'error': str(e)}
 
-    def process_all_images(self, file_paths):
-        """Process multiple images at once."""
-        if not self.output_directory:
-            return {'success': False, 'error': 'Output directory not set'}
-
-        results = []
-        for file_path in file_paths:
-            try:
-                result = self.process_image(file_path, {})
-                if result['success']:
-                    results.append({
-                        'path': file_path,
-                        'success': True,
-                        'output_paths': result['output_paths']
-                    })
-                else:
-                    results.append({
-                        'path': file_path,
-                        'success': False,
-                        'error': result['error']
-                    })
-            except Exception as e:
-                results.append({
-                    'path': file_path,
-                    'success': False,
-                    'error': str(e)
-                })
-
-        # Count successes and failures
-        successes = sum(1 for r in results if r['success'])
-        failures = len(results) - successes
-
-        return {
-            'success': True,
-            'results': results,
-            'summary': f"Processed {successes} images successfully" + 
-                      (f", {failures} failed" if failures > 0 else "")
-        }
+    def process_all_images(self, images):
+        """
+        Process multiple images at once.
+        images: List of dicts with {path, exportLeft, exportRight} indicating which halves to export
+        """
+        try:
+            processed = 0
+            skipped = 0
+            
+            for img_info in images:
+                path = img_info['path']
+                try:
+                    image = Image.open(path)
+                    width = image.size[0]
+                    mid = width // 2
+                    
+                    # Get base filename without extension
+                    base_name = os.path.splitext(os.path.basename(path))[0]
+                    
+                    # Export left half if requested
+                    if img_info['exportLeft']:
+                        left = image.crop((0, 0, mid, image.size[1]))
+                        left_path = os.path.join(self.output_directory, f"{base_name}_left.jpg")
+                        left.save(left_path, quality=95)
+                        processed += 1
+                    else:
+                        skipped += 1
+                    
+                    # Export right half if requested
+                    if img_info['exportRight']:
+                        right = image.crop((mid, 0, width, image.size[1]))
+                        right_path = os.path.join(self.output_directory, f"{base_name}_right.jpg")
+                        right.save(right_path, quality=95)
+                        processed += 1
+                    else:
+                        skipped += 1
+                        
+                except Exception as e:
+                    print(f"Error processing {path}: {str(e)}")
+                    skipped += 2
+            
+            return {
+                'success': True,
+                'summary': f"Successfully exported {processed} image halves. Skipped {skipped} deleted halves."
+            }
+            
+        except Exception as e:
+            return {'error': str(e)}

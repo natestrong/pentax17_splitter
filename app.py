@@ -37,7 +37,7 @@ def main():
     
     api = expose_api()
     window = webview.create_window(
-        'Pentax-17 Photo Splitter',
+        'Pentax17 Photo Splitter',
         f'{base_url}/templates/index.html',
         js_api=api,
         min_size=(800, 600)
