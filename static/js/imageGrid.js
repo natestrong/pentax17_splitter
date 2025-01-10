@@ -32,30 +32,30 @@ export class ImageGrid {
             splitPreview.className = 'split-preview';
             
             // Store image data
-            this.imageData.set(`${index}-left`, {
+            this.imageData.set(`${file.path}-left`, {
                 original: file.left_data_url,
                 cropped: file.left_cropped_url,
                 cropCoords: file.left_crop_coords
             });
-            this.imageData.set(`${index}-right`, {
+            this.imageData.set(`${file.path}-right`, {
                 original: file.right_data_url,
                 cropped: file.right_cropped_url,
                 cropCoords: file.right_crop_coords
             });
             
             // Create preview containers
-            splitPreview.appendChild(this.createPreviewContainer(file, 'left', index));
-            splitPreview.appendChild(this.createPreviewContainer(file, 'right', index));
+            splitPreview.appendChild(this.createPreviewContainer(file, 'left'));
+            splitPreview.appendChild(this.createPreviewContainer(file, 'right'));
             
             card.appendChild(splitPreview);
             this.container.appendChild(card);
         });
     }
 
-    createPreviewContainer(file, side, index) {
+    createPreviewContainer(file, side) {
         const container = document.createElement('div');
         container.className = 'preview-container';
-        const key = `${index}-${side}`;
+        const key = `${file.path}-${side}`;
         container.dataset.key = key;
         
         const wrapper = document.createElement('div');
@@ -91,7 +91,7 @@ export class ImageGrid {
         deleteBtn.innerHTML = '<i class="fas fa-trash"></i>';
         deleteBtn.onclick = (e) => {
             e.stopPropagation();
-            this.toggleDelete(key, index, deleteBtn);
+            this.toggleDelete(key, file.path, deleteBtn);
         };
         
         // Rotation button
@@ -136,7 +136,7 @@ export class ImageGrid {
         return container;
     }
 
-    toggleDelete(key, index, deleteBtn) {
+    toggleDelete(key, path, deleteBtn) {
         const container = this.container.querySelector(
             `.preview-container[data-key="${key}"]`
         );
@@ -156,10 +156,10 @@ export class ImageGrid {
         // Check if both halves are deleted
         const side = key.split('-')[1];
         const otherSide = side === 'left' ? 'right' : 'left';
-        const otherKey = `${index}-${otherSide}`;
+        const otherKey = `${path}-${otherSide}`;
         
         const card = this.container.querySelector(
-            `.image-card[data-index="${index}"]`
+            `.image-card[data-index="${path.split('/').pop()}"]`
         );
         
         if (this.deletedHalves.has(otherKey) && this.deletedHalves.has(key)) {

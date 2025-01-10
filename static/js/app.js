@@ -8,6 +8,7 @@ export class App {
         this.lastPhotoDir = localStorage.getItem('lastPhotoDir') || '~';
         this.modal = new Modal();
         this.imageGrid = new ImageGrid(this.modal, this);
+        this.loadingIndicator = document.getElementById('loading-indicator');
         
         this.setupEventListeners();
         this.updateButtons();
@@ -99,9 +100,18 @@ export class App {
         }
     }
 
+    showLoading() {
+        this.loadingIndicator.classList.add('active');
+    }
+
+    hideLoading() {
+        this.loadingIndicator.classList.remove('active');
+    }
+
     async selectPhotos() {
         try {
             console.log('Selecting photos with lastPhotoDir:', this.lastPhotoDir);
+            this.showLoading();
             const result = await pywebview.api.select_photos(this.lastPhotoDir);
             console.log('Select photos result:', result);
             
@@ -122,6 +132,8 @@ export class App {
         } catch (error) {
             console.error('Error in selectPhotos:', error);
             this.showError('Failed to select photos');
+        } finally {
+            this.hideLoading();
         }
     }
 }

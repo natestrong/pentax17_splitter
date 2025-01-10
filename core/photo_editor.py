@@ -193,6 +193,7 @@ class PhotoEditor:
     def process_image(self, file_path, edits):
         """Split an image into left and right halves and save them separately."""
         try:
+            print(f"Processing image {file_path} with edits: {edits}")  # Debug log
             with Image.open(file_path) as img:
                 # Convert to RGB if necessary
                 if img.mode in ('RGBA', 'P'):
@@ -205,16 +206,25 @@ class PhotoEditor:
                 if edits.get('exportLeft', True):
                     left_half = img.crop((0, 0, mid_x, height))
                     
-                    # Apply rotation if specified
-                    left_rotation = edits.get('leftRotation', 0)
-                    if left_rotation:
-                        left_half = left_half.rotate(-left_rotation, expand=True)
-                    
-                    # Detect and remove black borders if enabled
-                    if edits.get('removeBorderLeft', True):
+                    # Apply app-specified crop if available
+                    left_crop_coords = edits.get('leftCropCoords')
+                    if left_crop_coords:
+                        print(f"Applying left crop coords: {left_crop_coords}")  # Debug log
+                        left_half = left_half.crop(tuple(left_crop_coords))
+                    # Otherwise use automatic border detection if enabled
+                    elif edits.get('removeBorderLeft', True):
                         crop_box = self.detect_black_borders(left_half)
                         if crop_box:
+                            print(f"Applying auto-detected left crop: {crop_box}")  # Debug log
                             left_half = left_half.crop(crop_box)
+                    
+                    # Apply rotation after cropping
+                    left_rotation = edits.get('leftRotation', 0)
+                    print(f"Applying left rotation: {left_rotation}")  # Debug log
+                    if left_rotation:
+                        # Convert from clockwise to counterclockwise
+                        pil_rotation = (360 - left_rotation) % 360
+                        left_half = left_half.rotate(pil_rotation, expand=True)
                     
                     output_path = os.path.join(
                         self.output_directory,
@@ -226,16 +236,25 @@ class PhotoEditor:
                 if edits.get('exportRight', True):
                     right_half = img.crop((mid_x, 0, width, height))
                     
-                    # Apply rotation if specified
-                    right_rotation = edits.get('rightRotation', 0)
-                    if right_rotation:
-                        right_half = right_half.rotate(-right_rotation, expand=True)
-                    
-                    # Detect and remove black borders if enabled
-                    if edits.get('removeBorderRight', True):
+                    # Apply app-specified crop if available
+                    right_crop_coords = edits.get('rightCropCoords')
+                    if right_crop_coords:
+                        print(f"Applying right crop coords: {right_crop_coords}")  # Debug log
+                        right_half = right_half.crop(tuple(right_crop_coords))
+                    # Otherwise use automatic border detection if enabled
+                    elif edits.get('removeBorderRight', True):
                         crop_box = self.detect_black_borders(right_half)
                         if crop_box:
+                            print(f"Applying auto-detected right crop: {crop_box}")  # Debug log
                             right_half = right_half.crop(crop_box)
+                    
+                    # Apply rotation after cropping
+                    right_rotation = edits.get('rightRotation', 0)
+                    print(f"Applying right rotation: {right_rotation}")  # Debug log
+                    if right_rotation:
+                        # Convert from clockwise to counterclockwise
+                        pil_rotation = (360 - right_rotation) % 360
+                        right_half = right_half.rotate(pil_rotation, expand=True)
                     
                     output_path = os.path.join(
                         self.output_directory,
