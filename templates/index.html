@@ -6,68 +6,78 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 </head>
 <body>
-    <h1>Pentax17 Photo Splitter</h1>
-    
-    <div class="setup-container">
-        <div>
-            <button id="select-photos">Choose Photos</button>
-            <span id="file-count"></span>
+    <header class="header">
+        <div class="header-title">
+            <h1>Pentax17 Photo Splitter</h1>
         </div>
-        <div class="dir-selector">
-            <button id="select-output">Select Output Directory</button>
-            <div id="output-dir" class="output-path"></div>
+        <div class="setup-container">
+            <div>
+                <button id="select-photos">Choose Photos</button>
+                <span id="file-count"></span>
+            </div>
+            <div class="dir-selector">
+                <button id="select-output">Select Output Directory</button>
+                <div id="output-dir" class="output-path"></div>
+            </div>
+            <button id="export-button" disabled>Export All</button>
+            <div class="theme-toggle">
+                <button id="theme-toggle-btn">
+                    <i class="fas fa-sun"></i>
+                </button>
+            </div>
+            <div class="error-message" id="error-message"></div>
         </div>
-        <button id="export-button" disabled>Export All</button>
-        <div class="error-message" id="error-message"></div>
-    </div>
-    
-    <!-- Loading Indicator -->
-    <div id="loading-indicator" class="loading-indicator">
-        <div class="spinner"></div>
-        <div class="loading-text">Loading images...</div>
-    </div>
-    
-    <div id="image-container" class="image-container"></div>
+    </header>
 
-    <!-- Modal -->
-    <div id="imageModal" class="modal">
-        <div class="modal-content">
-            <button class="modal-close" onclick="app.modal.close()">
-                <i class="fas fa-times"></i>
-            </button>
-            <button class="modal-nav-button prev" onclick="app.modal.navigate('left')">
-                <i class="fas fa-chevron-left"></i>
-            </button>
-            <button class="modal-nav-button next" onclick="app.modal.navigate('right')">
-                <i class="fas fa-chevron-right"></i>
-            </button>
-            <div class="modal-image-wrapper">
-                <div class="modal-image-container">
-                    <img id="modalImage">
-                </div>
-                <div class="modal-image-info">
-                    <div id="modalFilename" class="modal-filename"></div>
-                    <div id="modalLabel" class="side-label"></div>
-                </div>
-                <div class="preview-tools">
-                    <button class="delete-button" title="Delete this half">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                    <button class="rotate-button" title="Rotate this half">
-                        <i class="fas fa-redo"></i>
-                    </button>
-                    <label class="border-remove-label" title="Automatically remove black borders when exporting">
-                        <input type="checkbox" class="border-remove-checkbox" checked>
-                        <i class="fas fa-crop-alt"></i>
-                    </label>
+    <main class="main-content">
+        <!-- Loading Indicator -->
+        <div id="loading-indicator" class="loading-indicator">
+            <div class="spinner"></div>
+            <div class="loading-text">Loading images...</div>
+        </div>
+        
+        <div id="image-container" class="image-container"></div>
+
+        <!-- Modal -->
+        <div id="imageModal" class="modal">
+            <div class="modal-content">
+                <button class="modal-close" onclick="app.modal.close()">
+                    <i class="fas fa-times"></i>
+                </button>
+                <button class="modal-nav-button prev" onclick="app.modal.navigate('left')">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+                <button class="modal-nav-button next" onclick="app.modal.navigate('right')">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+                <div class="modal-image-wrapper">
+                    <div class="modal-image-container">
+                        <img id="modalImage">
+                    </div>
+                    <div class="modal-image-info">
+                        <div id="modalFilename" class="modal-filename"></div>
+                        <div id="modalLabel" class="side-label"></div>
+                    </div>
+                    <div class="preview-tools">
+                        <button class="delete-button" title="Delete this half">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                        <button class="rotate-button" title="Rotate this half">
+                            <i class="fas fa-redo"></i>
+                        </button>
+                        <label class="border-remove-label" title="Automatically remove black borders when exporting">
+                            <input type="checkbox" class="border-remove-checkbox" checked>
+                            <i class="fas fa-crop-alt"></i>
+                        </label>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
 
-    <script type="module">
-        import { App } from '/static/js/app.js';
-        window.app = new App();
-    </script>
+        <script type="module">
+            import { App } from '/static/js/app.js';
+            window.app = new App();
+        </script>
+    </main>
 </body>
 </html>

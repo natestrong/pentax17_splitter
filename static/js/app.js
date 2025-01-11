@@ -10,6 +10,11 @@ export class App {
         this.imageGrid = new ImageGrid(this.modal, this);
         this.loadingIndicator = document.getElementById('loading-indicator');
         
+        // Set initial theme
+        const savedTheme = localStorage.getItem('theme') || 'dark';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        this.updateThemeIcon(savedTheme);
+        
         this.setupEventListeners();
         this.updateButtons();
     }
@@ -18,6 +23,7 @@ export class App {
         document.getElementById('select-photos').onclick = () => this.selectPhotos();
         document.getElementById('select-output').onclick = () => this.selectOutputDir();
         document.getElementById('export-button').onclick = () => this.exportAll();
+        document.getElementById('theme-toggle-btn').onclick = () => this.toggleTheme();
     }
 
     showError(message) {
@@ -98,6 +104,19 @@ export class App {
         } catch (error) {
             this.showError('Failed to process images');
         }
+    }
+
+    toggleTheme() {
+        const currentTheme = document.documentElement.getAttribute('data-theme');
+        const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+        document.documentElement.setAttribute('data-theme', newTheme);
+        localStorage.setItem('theme', newTheme);
+        this.updateThemeIcon(newTheme);
+    }
+
+    updateThemeIcon(theme) {
+        const icon = document.querySelector('#theme-toggle-btn i');
+        icon.className = theme === 'light' ? 'fas fa-moon' : 'fas fa-sun';
     }
 
     showLoading() {
